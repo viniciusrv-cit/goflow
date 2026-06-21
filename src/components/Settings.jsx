@@ -1,0 +1,258 @@
+import { useState, useEffect } from 'react';
+import { profileService } from '../services/profileService';
+import { apiService } from '../services/apiService';
+
+export default function Settings({
+  profile,
+  profiles,
+  onClose,
+  onProfileUpdated,
+  onProfileDeleted
+}) {
+  const [selectedProfile, setSelectedProfile] = useState(profile);
+  const [formData, setFormData] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  useEffect(() => {
+    if (selectedProfile) {
+      setFormData({
+        name: selectedProfile.name,
+        baseUrl: selectedProfile.baseUrl,
+        token: selectedProfile.token,
+        model: selectedProfile.model
+      });
+    }
+  }, [selectedProfile]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setIsLoading(true);
+
+    try {
+      if (!formData.name.trim()) {
+        throw new Error('Nome é obrigatório');
+      }
+      if (!formData.token.trim()) {
+        throw new Error('Token é obrigatório');
+      }
+
+      await profileService.updateProfile(selectedProfile.id, {
+        name: formData.name.trim(),
+        baseUrl: formData.baseUrl.trim(),
+        token: formData.token.trim(),
+        model: formData.model
+      });
+
+      setSuccess('Profile atualizado com sucesso');
+      setIsEditing(false);
+      await onProfileUpdated();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setTestResult(null);
+    setTestingConnection(true);
+
+    try {
+      const result = await apiService.testConnection({
+        baseUrl: formData.baseUrl,
+        token: formData.token,
+        model: formData.model
+      });
+
+      if (result.success) {
+        setTestResult({ success: true, message: 'Conexão OK ✓' });
+      } else {
+        setTestResult({ success: false, message: `Erro: ${result.error}` });
+      }
+    } catch (err) {
+      setTestResult({ success: false, message: `Erro: ${err.message}` });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Tem certeza? Todas as conversas deste profile serão deletadas.')) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await profileService.deleteProfile(selectedProfile.id);
+      setSuccess('Profile deletado');
+      await onProfileDeleted();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!formData) {
+    return null;
+  }
+
+  return (
+    <div className="settings-container">
+      <div className="settings-header">
+        <button className="back-btn" onClick={onClose}>← Voltar</button>
+        <h1>Settings</h1>
+      </div>
+
+      <div className="settings-body">
+        <div className="settings-section">
+          <h2>Profiles</h2>
+          <div className="profile-tabs">
+            {profiles.map(p => (
+              <button
+                key={p.id}
+                className={`profile-tab ${selectedProfile.id === p.id ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedProfile(p);
+                  setIsEditing(false);
+                  setError('');
+                  setSuccess('');
+                }}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {selectedProfile && (
+          <form onSubmit={handleSave} className="settings-form">
+            <div className="form-group">
+              <label>Nome</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                disabled={!isEditing || isLoading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>URL do Gateway</label>
+              <input
+                type="url"
+                name="baseUrl"
+                value={formData.baseUrl}
+                onChange={handleInputChange}
+                disabled={!isEditing || isLoading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Token JWT</label>
+              <textarea
+                name="token"
+                value={formData.token}
+                onChange={handleInputChange}
+                disabled={!isEditing || isLoading}
+                rows="4"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Modelo</label>
+              <input
+                type="text"
+                name="model"
+                value={formData.model}
+                onChange={handleInputChange}
+                disabled={!isEditing || isLoading}
+              />
+            </div>
+
+            {error && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+            {testResult && (
+              <div className={`test-result ${testResult.success ? 'success' : 'error'}`}>
+                {testResult.message}
+              </div>
+            )}
+
+            <div className="form-actions">
+              {!isEditing ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-test"
+                    onClick={handleTestConnection}
+                    disabled={testingConnection}
+                  >
+                    {testingConnection ? 'Testando...' : 'Testar Conexão'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={handleDelete}
+                    disabled={isLoading}
+                  >
+                    Deletar Profile
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setFormData({
+                        name: selectedProfile.name,
+                        baseUrl: selectedProfile.baseUrl,
+                        token: selectedProfile.token,
+                        model: selectedProfile.model
+                      });
+                    }}
+                    disabled={isLoading}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Salvando...' : 'Salvar'}
+                  </button>
+                </>
+              )}
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}

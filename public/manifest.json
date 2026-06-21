@@ -1,0 +1,11 @@
+{
+  "name": "Claude Gateway Client",
+  "short_name": "Claude",
+  "description": "Chat client para LiteLLM Gateway com suporte a multiplos profiles",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1f2937",
+  "background_color": "#ffffff"
+}
