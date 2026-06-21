@@ -4,9 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1f2937">
-  <meta name="description" content="Claude Gateway Client - Chat via LiteLLM Proxy">
-  <title>Claude Gateway</title>
-  <link rel="manifest" href="/manifest.json">
+  <meta name="description" content="GoFlow - Chat client para CI&T Flow LLM Gateway">
+  <title>GoFlow</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/icon.svg" sizes="any" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #root {
@@ -24,12 +27,5 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => {
-        console.warn('Service Worker registration failed:', err);
-      });
-    }
-  </script>
 </body>
 </html>
