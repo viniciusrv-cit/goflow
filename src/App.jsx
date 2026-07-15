@@ -3,6 +3,7 @@ import { profileService } from './services/profileService';
 import ProfileSelector from './components/ProfileSelector';
 import ChatWindow from './components/ChatWindow';
 import Settings from './components/Settings';
+import GatewayDiagnostics from './components/GatewayDiagnostics';
 import './App.css';
 
 export default function App() {
@@ -10,6 +11,7 @@ export default function App() {
   const [profiles, setProfiles] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showProfileSelector, setShowProfileSelector] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -82,6 +84,15 @@ export default function App() {
     );
   }
 
+  if (showDiagnostics && activeProfile) {
+    return (
+      <GatewayDiagnostics
+        profile={activeProfile}
+        onClose={() => setShowDiagnostics(false)}
+      />
+    );
+  }
+
   if (showSettings) {
     return (
       <Settings 
@@ -90,6 +101,7 @@ export default function App() {
         onClose={() => setShowSettings(false)}
         onProfileUpdated={handleProfileUpdated}
         onProfileDeleted={handleProfileDeleted}
+        onOpenDiagnostics={() => { setShowSettings(false); setShowDiagnostics(true); }}
       />
     );
   }

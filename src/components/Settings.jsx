@@ -7,7 +7,8 @@ export default function Settings({
   profiles,
   onClose,
   onProfileUpdated,
-  onProfileDeleted
+  onProfileDeleted,
+  onOpenDiagnostics
 }) {
   const [selectedProfile, setSelectedProfile] = useState(profile);
   const [formData, setFormData] = useState(null);
@@ -121,6 +122,20 @@ export default function Settings({
       </div>
 
       <div className="settings-body">
+        <div className="settings-section">
+          <h2>Ferramentas de desenvolvedor</h2>
+          <button
+            type="button"
+            className="btn btn-diag"
+            onClick={onOpenDiagnostics}
+          >
+            Diagnóstico de Gateway
+          </button>
+          <p style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 6 }}>
+            Testa latência, erros, limite de payload e continuidade de sessão do gateway.
+          </p>
+        </div>
+
         <div className="settings-section">
           <h2>Profiles</h2>
           <div className="profile-tabs">
