@@ -134,6 +134,7 @@ export default function App() {
       profile={activeProfile}
       onSettingsClick={() => setShowSettings(true)}
       onChangeProfile={() => setShowProfileSelector(true)}
+      onOpenDiagnostics={() => setShowDiagnostics(true)}
       profiles={profiles}
     />
   );

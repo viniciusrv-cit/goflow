@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
+import FileImport from './FileImport';
 
-export default function ChatInput({ onSendMessage, isLoading }) {
+export default function ChatInput({ onSendMessage, isLoading, isOnline, onFileExtracted, onOpenTemplates, onOpenContextLibrary }) {
   const [message, setMessage] = useState('');
   const textareaRef = useRef(null);
 
@@ -13,42 +14,56 @@ export default function ChatInput({ onSendMessage, isLoading }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!message.trim() || isLoading) return;
-
+    if (!message.trim() || isLoading || !isOnline) return;
     onSendMessage(message.trim());
     setMessage('');
-    
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e); }
   };
 
   return (
-    <form className="chat-input-form" onSubmit={handleSubmit}>
-      <textarea
-        ref={textareaRef}
-        className="chat-input"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder="Digite sua mensagem... (Shift+Enter para nova linha)"
-        disabled={isLoading}
-        rows="1"
-      />
-      <button
-        type="submit"
-        className="chat-send-btn"
-        disabled={isLoading || !message.trim()}
-      >
-        {isLoading ? '⟳' : '→'}
-      </button>
-    </form>
+    <div className="chat-input-area">
+      <div className="chat-input-toolbar">
+        <FileImport onExtracted={onFileExtracted} />
+        <button
+          type="button"
+          className="chat-toolbar-btn"
+          onClick={onOpenTemplates}
+          title="Templates"
+        >
+          ⊞
+        </button>
+        <button
+          type="button"
+          className="chat-toolbar-btn"
+          onClick={onOpenContextLibrary}
+          title="Biblioteca de contextos"
+        >
+          ⊟
+        </button>
+      </div>
+      <form className="chat-input-form" onSubmit={handleSubmit}>
+        <textarea
+          ref={textareaRef}
+          className="chat-input"
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={isOnline ? 'Digite sua mensagem...' : 'Sem conexão — envio bloqueado'}
+          disabled={isLoading || !isOnline}
+          rows="1"
+        />
+        <button
+          type="submit"
+          className="chat-send-btn"
+          disabled={isLoading || !message.trim() || !isOnline}
+        >
+          {isLoading ? '⟳' : '→'}
+        </button>
+      </form>
+    </div>
   );
 }
