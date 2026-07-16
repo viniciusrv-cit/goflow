@@ -71,25 +71,28 @@ export default function ConversationList({
                   ⋮
                 </button>
                 {menuId === conv.id && (
-                  <div className="conv-context-menu" onClick={e => e.stopPropagation()}>
-                    <button onClick={e => startEdit(conv, e)}>Renomear</button>
-                    <button onClick={() => { onTogglePin(conv.id); setMenuId(null); }}>
-                      {conv.pinned ? 'Desafixar' : 'Fixar'}
-                    </button>
-                    <button onClick={() => { onDuplicate(conv.id); setMenuId(null); }}>Duplicar</button>
-                    <button onClick={() => { onToggleArchive(conv.id); setMenuId(null); }}>
-                      {conv.archived ? 'Restaurar' : 'Arquivar'}
-                    </button>
-                    <button
-                      className="conv-menu-danger"
-                      onClick={() => {
-                        if (confirm('Deletar esta conversa?')) onDeleteConversation(conv.id);
-                        setMenuId(null);
-                      }}
-                    >
-                      Deletar
-                    </button>
-                  </div>
+                  <>
+                    <div className="menu-backdrop" onClick={() => setMenuId(null)} />
+                    <div className="conv-context-menu">
+                      <button onClick={e => startEdit(conv, e)}>Renomear</button>
+                      <button onClick={() => { onTogglePin(conv.id); setMenuId(null); }}>
+                        {conv.pinned ? 'Desafixar' : 'Fixar'}
+                      </button>
+                      <button onClick={() => { onDuplicate(conv.id); setMenuId(null); }}>Duplicar</button>
+                      <button onClick={() => { onToggleArchive(conv.id); setMenuId(null); }}>
+                        {conv.archived ? 'Restaurar' : 'Arquivar'}
+                      </button>
+                      <button
+                        className="conv-menu-danger"
+                        onClick={() => {
+                          if (confirm('Deletar esta conversa?')) onDeleteConversation(conv.id);
+                          setMenuId(null);
+                        }}
+                      >
+                        Deletar
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>

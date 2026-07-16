@@ -236,14 +236,17 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
           <ProfileIndicator profile={profile} />
           <button className="menu-button" onClick={() => setShowMenu(!showMenu)}>⋮</button>
           {showMenu && (
-            <div className="menu-dropdown" ref={menuRef(setShowMenu)}>
-              <button className="menu-item" onClick={() => { setShowMenu(false); setShowContextLibrary(true); }}>Biblioteca de contextos</button>
-              <button className="menu-item" onClick={() => { setShowMenu(false); onChangeProfile(); }}>Trocar profile</button>
-              <button className="menu-item" onClick={() => { setShowMenu(false); onSettingsClick(); }}>Configurações</button>
-              {onOpenDiagnostics && (
-                <button className="menu-item" onClick={() => { setShowMenu(false); onOpenDiagnostics(); }}>Diagnóstico de gateway</button>
-              )}
-            </div>
+            <>
+              <div className="menu-backdrop" onClick={() => setShowMenu(false)} />
+              <div className="menu-dropdown">
+                <button className="menu-item" onClick={() => { setShowMenu(false); setShowContextLibrary(true); }}>Biblioteca de contextos</button>
+                <button className="menu-item" onClick={() => { setShowMenu(false); onChangeProfile(); }}>Trocar profile</button>
+                <button className="menu-item" onClick={() => { setShowMenu(false); onSettingsClick(); }}>Configurações</button>
+                {onOpenDiagnostics && (
+                  <button className="menu-item" onClick={() => { setShowMenu(false); onOpenDiagnostics(); }}>Diagnóstico de gateway</button>
+                )}
+              </div>
+            </>
           )}
         </div>
 
@@ -328,23 +331,26 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
 
         <button className="menu-button" onClick={() => setShowConvMenu(!showConvMenu)}>⋮</button>
         {showConvMenu && (
-          <div className="menu-dropdown" ref={menuRef(setShowConvMenu)}>
-            <button className="menu-item" onClick={startTitleEdit}>Renomear</button>
-            <button className="menu-item" onClick={() => handleTogglePin(activeConversation.id)}>
-              {activeConversation?.pinned ? 'Desafixar' : 'Fixar'}
-            </button>
-            <button className="menu-item" onClick={() => handleDuplicate(activeConversation.id)}>Duplicar</button>
-            <button className="menu-item" onClick={handleExport}>Exportar (.md)</button>
-            <button className="menu-item" onClick={() => handleToggleArchive(activeConversation.id)}>
-              {activeConversation?.archived ? 'Restaurar' : 'Arquivar'}
-            </button>
-            <button className="menu-item menu-item-danger" onClick={() => {
-              if (confirm('Deletar esta conversa?')) handleDeleteConversation(activeConversation.id);
-              setShowConvMenu(false);
-            }}>
-              Deletar
-            </button>
-          </div>
+          <>
+            <div className="menu-backdrop" onClick={() => setShowConvMenu(false)} />
+            <div className="menu-dropdown">
+              <button className="menu-item" onClick={startTitleEdit}>Renomear</button>
+              <button className="menu-item" onClick={() => handleTogglePin(activeConversation.id)}>
+                {activeConversation?.pinned ? 'Desafixar' : 'Fixar'}
+              </button>
+              <button className="menu-item" onClick={() => handleDuplicate(activeConversation.id)}>Duplicar</button>
+              <button className="menu-item" onClick={handleExport}>Exportar (.md)</button>
+              <button className="menu-item" onClick={() => handleToggleArchive(activeConversation.id)}>
+                {activeConversation?.archived ? 'Restaurar' : 'Arquivar'}
+              </button>
+              <button className="menu-item menu-item-danger" onClick={() => {
+                if (confirm('Deletar esta conversa?')) handleDeleteConversation(activeConversation.id);
+                setShowConvMenu(false);
+              }}>
+                Deletar
+              </button>
+            </div>
+          </>
         )}
       </div>
 
@@ -407,11 +413,3 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
   );
 }
 
-// Helper: close menu when clicking outside
-function menuRef(setShow) {
-  return (el) => {
-    if (!el) return;
-    const handler = (e) => { if (!el.contains(e.target)) setShow(false); };
-    setTimeout(() => document.addEventListener('mousedown', handler), 0);
-  };
-}
