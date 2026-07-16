@@ -14,7 +14,8 @@ import { contextLibraryService } from '../services/profileService';
 export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, onOpenDiagnostics }) {
   // Navigation
   const [view, setView] = useState('list'); // 'list' | 'chat'
-  const chatEntryPushed = useRef(false); // tracks whether we pushed a history entry
+  const chatEntryPushed = useRef(false);  // true while a pushState entry is live
+  const suppressPopstate = useRef(false); // suppress popstate triggered by ← button
 
   // Data
   const [conversations, setConversations] = useState([]);
@@ -61,7 +62,13 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
   // ── Android hardware back button via History API ────────────────
   useEffect(() => {
     const handler = () => {
-      // popstate fires when we pop the state we pushed on entering chat
+      // The ← button sets suppressPopstate before calling history.back(),
+      // so we skip this event — navigation already happened synchronously.
+      if (suppressPopstate.current) {
+        suppressPopstate.current = false;
+        return;
+      }
+      // Otherwise this is the Android hardware back button.
       if (chatEntryPushed.current) {
         chatEntryPushed.current = false;
         goToListInternal();
@@ -114,24 +121,32 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
     setView('chat');
   }
 
-  // Navigate back to list: pop the history entry → triggers popstate → goToListInternal
+  // Navigate back to list (← button): navigate immediately, then clean up history entry.
+  // Using suppressPopstate prevents the popstate event from double-navigating.
   function goToList() {
+    goToListInternal(); // navigate now — no async dependency
     if (chatEntryPushed.current) {
-      window.history.back(); // triggers popstate handler
-    } else {
-      goToListInternal();
+      chatEntryPushed.current = false;
+      suppressPopstate.current = true; // silence the upcoming popstate
+      window.history.back();           // pop the entry we pushed
     }
   }
 
   // ── Handlers ─────────────────────────────────────────────────────
   const handleNewConversation = async () => {
-    setShowMenu(false); // ensure menu/backdrop are closed
-    const newConv = await chatService.createConversation(profile.id, 'Nova conversa');
+    setShowMenu(false);
+    const { id } = await chatService.createConversation(profile.id, 'Nova conversa');
     await refreshConversations();
-    goToChat(newConv);
+    // Fetch fresh from DB — guarantees all fields (title, messages, etc.) are present
+    const fresh = await chatService.getConversation(id);
+    goToChat(fresh);
   };
 
-  const handleSelectConversation = (conv) => goToChat(conv);
+  const handleSelectConversation = async (conv) => {
+    // Fetch fresh from DB so messages are always up-to-date
+    const fresh = await chatService.getConversation(conv.id);
+    goToChat(fresh ?? conv);
+  };
 
   // Title editing
   const startTitleEdit = () => {
@@ -270,7 +285,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
         <div className="screen-header">
           <div className="app-title-wrap">
             <h1 className="app-title">GoFlow</h1>
-            <span className="app-version">v1.0.0</span>
+            <span className="app-version">v1.1.0</span>
           </div>
           <ProfileIndicator profile={profile} />
           <button className="menu-button" onClick={() => setShowMenu(v => !v)}>⋮</button>
@@ -312,11 +327,6 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
             activeConversation={activeConversation}
             pendingConvId={pendingConvId}
             onSelectConversation={handleSelectConversation}
-            onDeleteConversation={handleDeleteConversation}
-            onTogglePin={handleTogglePin}
-            onToggleArchive={handleToggleArchive}
-            onDuplicate={handleDuplicate}
-            onEditTitle={handleEditTitleFromList}
           />
         </div>
 
