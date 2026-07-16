@@ -1,14 +1,16 @@
 import { latencyService } from './profileService';
 
-async function rawSend(token, model, messages, { temperature = 0.7, maxTokens = 4096, systemPrompt = '' } = {}) {
+async function rawSend(token, model, messages, { useAdvancedParams = true, temperature = 0.7, maxTokens = 4096, systemPrompt = '' } = {}) {
   const start = Date.now();
   const body = {
     model,
-    max_tokens: maxTokens,
-    temperature,
     messages: messages.map(m => ({ role: m.role, content: m.content }))
   };
-  if (systemPrompt) body.system = systemPrompt;
+  if (useAdvancedParams) {
+    body.max_tokens = maxTokens;
+    body.temperature = temperature;
+    if (systemPrompt) body.system = systemPrompt;
+  }
 
   const response = await fetch('/api/chat', {
     method: 'POST',
@@ -32,8 +34,8 @@ function parseGatewayError(parsed) {
 
 export const apiService = {
   async sendMessage(profile, messages, { onRetry } = {}) {
-    const { token, model, id: profileId, temperature, maxTokens, systemPrompt } = profile;
-    const params = { temperature, maxTokens, systemPrompt };
+    const { token, model, id: profileId, useAdvancedParams, temperature, maxTokens, systemPrompt } = profile;
+    const params = { useAdvancedParams, temperature, maxTokens, systemPrompt };
     const MAX_RETRIES = 2;
     const BACKOFF = [2000, 4000];
 

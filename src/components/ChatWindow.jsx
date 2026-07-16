@@ -14,6 +14,7 @@ import { contextLibraryService } from '../services/profileService';
 export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, onOpenDiagnostics }) {
   // Navigation
   const [view, setView] = useState('list'); // 'list' | 'chat'
+  const chatEntryPushed = useRef(false); // tracks whether we pushed a history entry
 
   // Data
   const [conversations, setConversations] = useState([]);
@@ -28,7 +29,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
   const [estimatedMs, setEstimatedMs] = useState(null);
   const [requestStart, setRequestStart] = useState(null);
 
-  // Inline title editing (B2)
+  // Inline title editing
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
 
@@ -48,6 +49,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
   const messagesEndRef = useRef(null);
   const titleInputRef = useRef(null);
 
+  // ── Online/offline ──────────────────────────────────────────────
   useEffect(() => {
     const up = () => setIsOnline(true);
     const down = () => setIsOnline(false);
@@ -56,6 +58,21 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
     return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
   }, []);
 
+  // ── Android hardware back button via History API ────────────────
+  useEffect(() => {
+    const handler = () => {
+      // popstate fires when we pop the state we pushed on entering chat
+      if (chatEntryPushed.current) {
+        chatEntryPushed.current = false;
+        goToListInternal();
+      }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Conversations ────────────────────────────────────────────────
   const refreshConversations = useCallback(async () => {
     const convs = await chatService.getConversationsByProfile(profile.id, showArchivedOnly);
     setConversations(convs);
@@ -64,30 +81,59 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
 
   useEffect(() => { refreshConversations(); }, [refreshConversations]);
 
+  // ── Auto scroll ──────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeConversation?.messages?.length]);
 
-  // Focus title input when editing starts
+  // ── Focus title input ────────────────────────────────────────────
   useEffect(() => {
     if (editingTitle && titleInputRef.current) titleInputRef.current.focus();
   }, [editingTitle]);
 
+  // ── Navigation helpers ───────────────────────────────────────────
+  function goToListInternal() {
+    setView('list');
+    setEditingTitle(false);
+    setShowConvMenu(false);
+    setShowMenu(false);
+    setError('');
+  }
+
+  // Navigate to chat: push a history entry for Android back support
+  function goToChat(conv) {
+    setActiveConversation(conv);
+    setEditingTitle(false);
+    setShowConvMenu(false);
+    setShowMenu(false);
+    setError('');
+    if (!chatEntryPushed.current) {
+      window.history.pushState({ goflow: 'chat' }, '');
+      chatEntryPushed.current = true;
+    }
+    setView('chat');
+  }
+
+  // Navigate back to list: pop the history entry → triggers popstate → goToListInternal
+  function goToList() {
+    if (chatEntryPushed.current) {
+      window.history.back(); // triggers popstate handler
+    } else {
+      goToListInternal();
+    }
+  }
+
+  // ── Handlers ─────────────────────────────────────────────────────
   const handleNewConversation = async () => {
+    setShowMenu(false); // ensure menu/backdrop are closed
     const newConv = await chatService.createConversation(profile.id, 'Nova conversa');
     await refreshConversations();
-    setActiveConversation(newConv);
-    setView('chat');
-    setError('');
+    goToChat(newConv);
   };
 
-  const handleSelectConversation = (conv) => {
-    setActiveConversation(conv);
-    setView('chat');
-    setError('');
-  };
+  const handleSelectConversation = (conv) => goToChat(conv);
 
-  // B2: title editing
+  // Title editing
   const startTitleEdit = () => {
     setTitleDraft(activeConversation?.title || '');
     setEditingTitle(true);
@@ -103,7 +149,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
     setEditingTitle(false);
   };
 
-  // Core send with Option A pending isolation (B5)
+  // Core send
   const handleSendMessage = useCallback(async (message) => {
     if (!activeConversation || !isOnline || pendingConvId) return;
 
@@ -153,23 +199,15 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
   }, [activeConversation, isOnline, pendingConvId, profile, refreshConversations]);
 
   const handlePreviewConfirm = (content) => { setPreview(null); handleSendMessage(content); };
-
-  const handleTemplateSelect = (tpl) => {
-    setShowTemplates(false);
-    setPreview({ content: tpl.content, label: `Template: ${tpl.name}` });
-  };
-
-  const handleContextSelect = (entry) => {
-    setShowContextLibrary(false);
-    setPreview({ content: contextLibraryService.getCurrentContent(entry), label: `Contexto: ${entry.name}` });
-  };
+  const handleTemplateSelect = (tpl) => { setShowTemplates(false); setPreview({ content: tpl.content, label: `Template: ${tpl.name}` }); };
+  const handleContextSelect = (entry) => { setShowContextLibrary(false); setPreview({ content: contextLibraryService.getCurrentContent(entry), label: `Contexto: ${entry.name}` }); };
 
   const handleDeleteConversation = async (convId) => {
     await chatService.deleteConversation(convId);
     const convs = await refreshConversations();
     if (activeConversation?.id === convId) {
-      setActiveConversation(convs.length > 0 ? convs[0] : null);
-      setView(convs.length > 0 ? 'list' : 'list');
+      setActiveConversation(convs[0] ?? null);
+      goToListInternal();
     }
   };
 
@@ -183,16 +221,14 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
   const handleToggleArchive = async (convId) => {
     await chatService.toggleArchive(convId);
     await refreshConversations();
-    if (activeConversation?.id === convId) { setActiveConversation(null); setView('list'); }
+    if (activeConversation?.id === convId) { setActiveConversation(null); goToListInternal(); }
     setShowConvMenu(false);
   };
 
   const handleDuplicate = async (convId) => {
     const dup = await chatService.duplicateConversation(convId);
     await refreshConversations();
-    setActiveConversation(dup);
-    setView('chat');
-    setShowConvMenu(false);
+    goToChat(dup);
   };
 
   const handleEditTitleFromList = async (convId, newTitle) => {
@@ -225,7 +261,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
       c.messages?.some(m => m.content.toLowerCase().includes(q));
   });
 
-  // ── List screen ────────────────────────────────────────────────
+  // ── List screen ─────────────────────────────────────────────────
   if (view === 'list') {
     return (
       <div className="screen">
@@ -237,7 +273,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
             <span className="app-version">v1.0.0</span>
           </div>
           <ProfileIndicator profile={profile} />
-          <button className="menu-button" onClick={() => setShowMenu(!showMenu)}>⋮</button>
+          <button className="menu-button" onClick={() => setShowMenu(v => !v)}>⋮</button>
           {showMenu && (
             <>
               <div className="menu-backdrop" onClick={() => setShowMenu(false)} />
@@ -267,10 +303,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
             />
           </div>
 
-          <button
-            className="archive-toggle"
-            onClick={() => setShowArchivedOnly(v => !v)}
-          >
+          <button className="archive-toggle" onClick={() => setShowArchivedOnly(v => !v)}>
             {showArchivedOnly ? '← Ver conversas ativas' : 'Ver arquivadas'}
           </button>
 
@@ -287,31 +320,26 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
           />
         </div>
 
-        {showContextLibrary && (
-          <ContextLibrary onClose={() => setShowContextLibrary(false)} onSelect={handleContextSelect} />
-        )}
-        {showTemplates && (
-          <TemplateManager onClose={() => setShowTemplates(false)} onSelect={handleTemplateSelect} />
-        )}
-        {preview && (
-          <PreviewModal
-            initialContent={preview.content}
-            sourceLabel={preview.label}
-            onConfirm={handlePreviewConfirm}
-            onCancel={() => setPreview(null)}
-          />
-        )}
+        {showContextLibrary && <ContextLibrary onClose={() => setShowContextLibrary(false)} onSelect={handleContextSelect} />}
+        {showTemplates && <TemplateManager onClose={() => setShowTemplates(false)} onSelect={handleTemplateSelect} />}
+        {preview && <PreviewModal initialContent={preview.content} sourceLabel={preview.label} onConfirm={handlePreviewConfirm} onCancel={() => setPreview(null)} />}
       </div>
     );
   }
 
-  // ── Chat screen ────────────────────────────────────────────────
+  // ── Chat screen ─────────────────────────────────────────────────
+  // Guard: if somehow we got here without an active conversation, go back
+  if (!activeConversation) {
+    goToListInternal();
+    return null;
+  }
+
   return (
     <div className="screen">
       {!isOnline && <div className="offline-banner">Sem conexão — leitura disponível, envio bloqueado</div>}
 
       <div className="screen-header">
-        <button className="back-btn-chat" onClick={() => { setView('list'); setEditingTitle(false); }}>←</button>
+        <button className="back-btn-chat" onClick={goToList}>←</button>
 
         {editingTitle ? (
           <div className="title-edit-wrap">
@@ -320,35 +348,35 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
               className="title-edit-input"
               value={titleDraft}
               onChange={e => setTitleDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Escape') setEditingTitle(false); }}
+              onKeyDown={e => { if (e.key === 'Enter') commitTitleEdit(); if (e.key === 'Escape') setEditingTitle(false); }}
             />
             <button className="title-edit-confirm" onClick={commitTitleEdit}>✓</button>
             <button className="title-edit-cancel" onClick={() => setEditingTitle(false)}>✕</button>
           </div>
         ) : (
           <div className="chat-header-title" onClick={startTitleEdit} title="Toque para renomear">
-            {activeConversation?.pinned && <span className="pin-indicator">📌 </span>}
-            <span className="title-text">{activeConversation?.title || 'Conversa'}</span>
+            {activeConversation.pinned && <span className="pin-indicator">📌 </span>}
+            <span className="title-text">{activeConversation.title || 'Nova conversa'}</span>
           </div>
         )}
 
-        <button className="menu-button" onClick={() => setShowConvMenu(!showConvMenu)}>⋮</button>
+        <button className="menu-button" onClick={() => setShowConvMenu(v => !v)}>⋮</button>
         {showConvMenu && (
           <>
             <div className="menu-backdrop" onClick={() => setShowConvMenu(false)} />
             <div className="menu-dropdown">
               <button className="menu-item" onClick={startTitleEdit}>Renomear</button>
               <button className="menu-item" onClick={() => handleTogglePin(activeConversation.id)}>
-                {activeConversation?.pinned ? 'Desafixar' : 'Fixar'}
+                {activeConversation.pinned ? 'Desafixar' : 'Fixar'}
               </button>
               <button className="menu-item" onClick={() => handleDuplicate(activeConversation.id)}>Duplicar</button>
               <button className="menu-item" onClick={handleExport}>Exportar (.md)</button>
               <button className="menu-item" onClick={() => handleToggleArchive(activeConversation.id)}>
-                {activeConversation?.archived ? 'Restaurar' : 'Arquivar'}
+                {activeConversation.archived ? 'Restaurar' : 'Arquivar'}
               </button>
               <button className="menu-item menu-item-danger" onClick={() => {
-                if (confirm('Deletar esta conversa?')) handleDeleteConversation(activeConversation.id);
                 setShowConvMenu(false);
+                if (confirm('Deletar esta conversa?')) handleDeleteConversation(activeConversation.id);
               }}>
                 Deletar
               </button>
@@ -357,18 +385,18 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
         )}
       </div>
 
-      {isLoading && pendingConvId === activeConversation?.id && (
+      {isLoading && pendingConvId === activeConversation.id && (
         <ProgressBar estimatedMs={estimatedMs} startedAt={requestStart} />
       )}
 
       <div className="messages-container">
-        {activeConversation?.messages.length === 0 && (
+        {activeConversation.messages.length === 0 && (
           <div className="empty-chat-hint">Nenhuma mensagem ainda. Escreva abaixo para começar.</div>
         )}
-        {activeConversation?.messages.map(msg => (
+        {activeConversation.messages.map(msg => (
           <MessageBubble key={msg.id} msg={msg} />
         ))}
-        {isLoading && pendingConvId === activeConversation?.id && (
+        {isLoading && pendingConvId === activeConversation.id && (
           <div className="loading-bubble">
             {retryInfo
               ? `Tentando novamente (${retryInfo.attempt}ª tentativa, aguarde ${retryInfo.delay}s)...`
@@ -390,7 +418,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
 
       <ChatInput
         onSendMessage={handleSendMessage}
-        isLoading={isLoading && pendingConvId === activeConversation?.id}
+        isLoading={isLoading && pendingConvId === activeConversation.id}
         isOnline={isOnline}
         blockingConvTitle={pendingConvTitle}
         onFileExtracted={(text, filename) => setPreview({ content: text, label: `Arquivo: ${filename}` })}
@@ -398,21 +426,9 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
         onOpenContextLibrary={() => setShowContextLibrary(true)}
       />
 
-      {preview && (
-        <PreviewModal
-          initialContent={preview.content}
-          sourceLabel={preview.label}
-          onConfirm={handlePreviewConfirm}
-          onCancel={() => setPreview(null)}
-        />
-      )}
-      {showTemplates && (
-        <TemplateManager onClose={() => setShowTemplates(false)} onSelect={handleTemplateSelect} />
-      )}
-      {showContextLibrary && (
-        <ContextLibrary onClose={() => setShowContextLibrary(false)} onSelect={handleContextSelect} />
-      )}
+      {preview && <PreviewModal initialContent={preview.content} sourceLabel={preview.label} onConfirm={handlePreviewConfirm} onCancel={() => setPreview(null)} />}
+      {showTemplates && <TemplateManager onClose={() => setShowTemplates(false)} onSelect={handleTemplateSelect} />}
+      {showContextLibrary && <ContextLibrary onClose={() => setShowContextLibrary(false)} onSelect={handleContextSelect} />}
     </div>
   );
 }
-

@@ -9,6 +9,7 @@ function profileToForm(p) {
     baseUrl: p.baseUrl ?? 'https://flow.ciandt.com/flow-llm-proxy',
     token: p.token ?? '',
     model: p.model ?? 'anthropic.claude-4-6-sonnet',
+    useAdvancedParams: p.useAdvancedParams ?? true,
     temperature: p.temperature ?? 0.7,
     maxTokens: p.maxTokens ?? 4096,
     systemPrompt: p.systemPrompt ?? ''
@@ -32,8 +33,11 @@ export default function Settings({
   }, [selectedProfile]);
 
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value
+    }));
   };
 
   const handleSave = async (e) => {
@@ -49,6 +53,7 @@ export default function Settings({
         baseUrl: formData.baseUrl.trim(),
         token: formData.token.trim(),
         model: formData.model,
+        useAdvancedParams: formData.useAdvancedParams,
         temperature: formData.temperature,
         maxTokens: formData.maxTokens,
         systemPrompt: formData.systemPrompt
@@ -164,30 +169,43 @@ export default function Settings({
               <h2>Parâmetros do modelo</h2>
 
               <div className="form-group">
-                <label>
-                  Temperature <span className="param-value">{formData.temperature}</span>
+                <label className="toggle-label">
+                  <input type="checkbox" name="useAdvancedParams" checked={formData.useAdvancedParams}
+                    onChange={handleChange} disabled={disabled} />
+                  Enviar parâmetros avançados (temperature, max_tokens, system prompt)
                 </label>
-                <input type="range" name="temperature" min="0" max="1" step="0.05"
-                  value={formData.temperature} onChange={handleChange} disabled={disabled} />
-                <div className="param-range-labels">
-                  <span>Preciso / determinístico (0)</span>
-                  <span>Criativo / variado (1)</span>
-                </div>
+                <div className="param-hint">Desative para modelos que não suportam estes parâmetros</div>
               </div>
 
-              <div className="form-group">
-                <label>Max Tokens</label>
-                <input type="number" name="maxTokens" min="256" max="32768" step="256"
-                  value={formData.maxTokens} onChange={handleChange} disabled={disabled} />
-                <div className="param-hint">Limite de tokens na resposta do modelo</div>
-              </div>
+              {formData.useAdvancedParams && (
+                <>
+                  <div className="form-group">
+                    <label>
+                      Temperature <span className="param-value">{formData.temperature}</span>
+                    </label>
+                    <input type="range" name="temperature" min="0" max="1" step="0.05"
+                      value={formData.temperature} onChange={handleChange} disabled={disabled} />
+                    <div className="param-range-labels">
+                      <span>Preciso / determinístico (0)</span>
+                      <span>Criativo / variado (1)</span>
+                    </div>
+                  </div>
 
-              <div className="form-group">
-                <label>System Prompt <span className="param-optional">(opcional)</span></label>
-                <textarea name="systemPrompt" value={formData.systemPrompt} onChange={handleChange}
-                  placeholder="Instrução fixa enviada em todo request (persona, idioma, restrições...)"
-                  rows="4" disabled={disabled} />
-              </div>
+                  <div className="form-group">
+                    <label>Max Tokens</label>
+                    <input type="number" name="maxTokens" min="256" max="32768" step="256"
+                      value={formData.maxTokens} onChange={handleChange} disabled={disabled} />
+                    <div className="param-hint">Limite de tokens na resposta do modelo</div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>System Prompt <span className="param-optional">(opcional)</span></label>
+                    <textarea name="systemPrompt" value={formData.systemPrompt} onChange={handleChange}
+                      placeholder="Instrução fixa enviada em todo request (persona, idioma, restrições...)"
+                      rows="4" disabled={disabled} />
+                  </div>
+                </>
+              )}
             </div>
 
             {error && <div className="error-message">{error}</div>}

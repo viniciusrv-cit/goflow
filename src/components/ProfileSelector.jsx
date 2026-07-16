@@ -7,6 +7,7 @@ const DEFAULTS = {
   baseUrl: 'https://flow.ciandt.com/flow-llm-proxy',
   token: '',
   model: 'anthropic.claude-4-6-sonnet',
+  useAdvancedParams: true,
   temperature: 0.7,
   maxTokens: 4096,
   systemPrompt: ''
@@ -19,8 +20,11 @@ export default function ProfileSelector({ profiles, onSelectProfile, onCreatePro
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'number' ? Number(value) : value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : type === 'number' ? Number(value) : value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -35,6 +39,7 @@ export default function ProfileSelector({ profiles, onSelectProfile, onCreatePro
         baseUrl: formData.baseUrl.trim(),
         token: formData.token.trim(),
         model: formData.model,
+        useAdvancedParams: formData.useAdvancedParams,
         temperature: formData.temperature,
         maxTokens: formData.maxTokens,
         systemPrompt: formData.systemPrompt
@@ -102,24 +107,37 @@ export default function ProfileSelector({ profiles, onSelectProfile, onCreatePro
           </div>
 
           <div className="form-group">
-            <label>Temperature <span className="param-value">{formData.temperature}</span></label>
-            <input type="range" name="temperature" min="0" max="1" step="0.05"
-              value={formData.temperature} onChange={handleChange} disabled={isSubmitting} />
-            <div className="param-range-labels"><span>Preciso (0)</span><span>Criativo (1)</span></div>
+            <label className="toggle-label">
+              <input type="checkbox" name="useAdvancedParams" checked={formData.useAdvancedParams}
+                onChange={handleChange} disabled={isSubmitting} />
+              Enviar parâmetros avançados (temperature, max_tokens, system prompt)
+            </label>
+            <div className="param-hint">Desative para modelos que não suportam estes parâmetros</div>
           </div>
 
-          <div className="form-group">
-            <label>Max Tokens</label>
-            <input type="number" name="maxTokens" min="256" max="32768" step="256"
-              value={formData.maxTokens} onChange={handleChange} disabled={isSubmitting} />
-          </div>
+          {formData.useAdvancedParams && (
+            <>
+              <div className="form-group">
+                <label>Temperature <span className="param-value">{formData.temperature}</span></label>
+                <input type="range" name="temperature" min="0" max="1" step="0.05"
+                  value={formData.temperature} onChange={handleChange} disabled={isSubmitting} />
+                <div className="param-range-labels"><span>Preciso (0)</span><span>Criativo (1)</span></div>
+              </div>
 
-          <div className="form-group">
-            <label>System Prompt <span className="param-optional">(opcional)</span></label>
-            <textarea name="systemPrompt" value={formData.systemPrompt} onChange={handleChange}
-              placeholder="Instrução fixa enviada em todo request (persona, idioma, restrições...)"
-              rows="3" disabled={isSubmitting} />
-          </div>
+              <div className="form-group">
+                <label>Max Tokens</label>
+                <input type="number" name="maxTokens" min="256" max="32768" step="256"
+                  value={formData.maxTokens} onChange={handleChange} disabled={isSubmitting} />
+              </div>
+
+              <div className="form-group">
+                <label>System Prompt <span className="param-optional">(opcional)</span></label>
+                <textarea name="systemPrompt" value={formData.systemPrompt} onChange={handleChange}
+                  placeholder="Instrução fixa enviada em todo request (persona, idioma, restrições...)"
+                  rows="3" disabled={isSubmitting} />
+              </div>
+            </>
+          )}
 
           {error && <div className="error-message">{error}</div>}
 
