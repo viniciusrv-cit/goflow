@@ -172,7 +172,7 @@ export default function Settings({
                 <label className="toggle-label">
                   <input type="checkbox" name="useAdvancedParams" checked={formData.useAdvancedParams}
                     onChange={handleChange} disabled={disabled} />
-                  Enviar parâmetros avançados (temperature, max_tokens, system prompt)
+                  Enviar parâmetros opcionais (temperature, system prompt)
                 </label>
                 <div className="param-hint">Desative para modelos que não suportam estes parâmetros</div>
               </div>

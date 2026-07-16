@@ -4,10 +4,10 @@ async function rawSend(token, model, messages, { useAdvancedParams = true, tempe
   const start = Date.now();
   const body = {
     model,
+    max_tokens: maxTokens,   // sempre obrigatório
     messages: messages.map(m => ({ role: m.role, content: m.content }))
   };
   if (useAdvancedParams) {
-    body.max_tokens = maxTokens;
     body.temperature = temperature;
     if (systemPrompt) body.system = systemPrompt;
   }
