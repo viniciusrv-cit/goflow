@@ -1,11 +1,19 @@
 import { latencyService } from './profileService';
 
-async function rawSend(token, model, messages) {
+async function rawSend(token, model, messages, { temperature = 0.7, maxTokens = 4096, systemPrompt = '' } = {}) {
   const start = Date.now();
+  const body = {
+    model,
+    max_tokens: maxTokens,
+    temperature,
+    messages: messages.map(m => ({ role: m.role, content: m.content }))
+  };
+  if (systemPrompt) body.system = systemPrompt;
+
   const response = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify({ model, max_tokens: 2048, messages: messages.map(m => ({ role: m.role, content: m.content })) })
+    body: JSON.stringify(body)
   });
   const duration = Date.now() - start;
   const data = await response.json();
@@ -24,13 +32,14 @@ function parseGatewayError(parsed) {
 
 export const apiService = {
   async sendMessage(profile, messages, { onRetry } = {}) {
-    const { token, model, id: profileId } = profile;
+    const { token, model, id: profileId, temperature, maxTokens, systemPrompt } = profile;
+    const params = { temperature, maxTokens, systemPrompt };
     const MAX_RETRIES = 2;
     const BACKOFF = [2000, 4000];
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const { ok, status, data, duration } = await rawSend(token, model, messages);
+        const { ok, status, data, duration } = await rawSend(token, model, messages, params);
 
         if (ok) {
           // Record latency on success
