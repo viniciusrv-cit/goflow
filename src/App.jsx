@@ -41,6 +41,12 @@ export default function App() {
   const handleProfileCreated = async () => {
     const allProfiles = await profileService.getAllProfiles();
     setProfiles(allProfiles);
+    // B4: set the newly created profile as active so the app goes straight to chat
+    if (allProfiles.length > 0) {
+      const newProfile = allProfiles[allProfiles.length - 1];
+      setActiveProfile(newProfile);
+      localStorage.setItem('lastUsedProfile', newProfile.id);
+    }
     setShowProfileSelector(false);
   };
 
