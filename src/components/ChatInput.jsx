@@ -55,7 +55,6 @@ export default function ChatInput({
           {isLoading ? '⟳' : '→'}
         </button>
       </form>
-      <div className="input-hint">Shift+Enter para nova linha</div>
     </div>
   );
 }

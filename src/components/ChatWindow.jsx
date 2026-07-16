@@ -232,7 +232,10 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
         {!isOnline && <div className="offline-banner">Sem conexão — leitura disponível, envio bloqueado</div>}
 
         <div className="screen-header">
-          <h1 className="app-title">GoFlow</h1>
+          <div className="app-title-wrap">
+            <h1 className="app-title">GoFlow</h1>
+            <span className="app-version">v1.0.0</span>
+          </div>
           <ProfileIndicator profile={profile} />
           <button className="menu-button" onClick={() => setShowMenu(!showMenu)}>⋮</button>
           {showMenu && (
