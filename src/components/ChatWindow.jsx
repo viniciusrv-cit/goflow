@@ -285,7 +285,7 @@ export default function ChatWindow({ profile, onSettingsClick, onChangeProfile, 
         <div className="screen-header">
           <div className="app-title-wrap">
             <h1 className="app-title">GoFlow</h1>
-            <span className="app-version">v1.1.0</span>
+            <span className="app-version">v1.1.1</span>
           </div>
           <ProfileIndicator profile={profile} />
           <button className="menu-button" onClick={() => setShowMenu(v => !v)}>⋮</button>
