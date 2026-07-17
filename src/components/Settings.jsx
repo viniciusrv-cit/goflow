@@ -133,6 +133,18 @@ export default function Settings({
           </div>
         </div>
 
+        <div className="settings-section settings-about">
+          <h2>Sobre</h2>
+          <p className="about-app-name">GoFlow <span className="about-version">v1.1.1</span></p>
+          <p className="about-desc">
+            Cliente web para o gateway LLM da CI&amp;T (<code>flow.ciandt.com</code>).
+          </p>
+          <div className="about-notice">
+            Validado apenas para modelos <strong>Anthropic</strong> (família Claude).
+            Outros provedores podem apresentar comportamento inesperado.
+          </div>
+        </div>
+
         {selectedProfile && (
           <form onSubmit={handleSave} className="settings-form">
 

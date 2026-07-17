@@ -197,4 +197,4 @@ git push
 
 ---
 
-## Versão atual: v1.1.0
+## Versão atual: v1.1.1

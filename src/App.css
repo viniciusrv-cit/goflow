@@ -626,6 +626,48 @@ body {
   padding-bottom: var(--spacing-sm);
 }
 
+.settings-about {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+}
+
+.about-app-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 var(--spacing-sm);
+}
+
+.about-version {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-light);
+  margin-left: 4px;
+}
+
+.about-desc {
+  font-size: 13px;
+  color: var(--text-light);
+  margin: 0 0 var(--spacing-sm);
+}
+
+.about-desc code {
+  font-family: monospace;
+  background: var(--border);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.about-notice {
+  font-size: 13px;
+  background: #fff8e1;
+  border-left: 3px solid #f59e0b;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: 0 4px 4px 0;
+  color: #7c5a00;
+}
+
 .profile-tabs {
   display: flex;
   gap: var(--spacing-sm);
